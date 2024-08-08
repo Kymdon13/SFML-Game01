@@ -12,4 +12,4 @@ d-----          2024/8/3     10:33                lib
 -a----         2023/11/4      5:39           1904 readme.md
 ```
 
-And then you can cmake using the CMakeLists.txt in the root dir.
+And then you can cmake using the CMakeLists.txt in the root dir(but do not forget to change your own dir of SFML and DLL path in line 10, 12 and 28).

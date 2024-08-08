@@ -1,5 +1,15 @@
+# assets
+assets/
+
 # the output dir
 build/
 
 # SFML
 SFML-2.6.1/
+
+# cmake stuff
+cmake_modules/
+CMakeLists.txt
+
+# README
+README.md
