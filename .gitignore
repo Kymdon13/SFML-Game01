@@ -1,0 +1,5 @@
+# the output dir
+build/
+
+# SFML
+SFML-2.6.1/
