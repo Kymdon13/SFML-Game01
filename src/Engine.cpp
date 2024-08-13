@@ -109,19 +109,19 @@ void Engine::spawnEnemy()
     
     switch (enemyType) {
         case 0:
-            this->enemy.setSize(sf::Vector2f(20.f, 20.f));
+            this->enemy.setSize(sf::Vector2f(40.f, 40.f));
             this->enemy.setFillColor(sf::Color::Magenta);
             break;
         case 1:
-            this->enemy.setSize(sf::Vector2f(30.f, 30.f));
+            this->enemy.setSize(sf::Vector2f(50.f, 50.f));
             this->enemy.setFillColor(sf::Color::Blue);
             break;
         case 2:
-            this->enemy.setSize(sf::Vector2f(50.f, 50.f));
+            this->enemy.setSize(sf::Vector2f(70.f, 70.f));
             this->enemy.setFillColor(sf::Color::Cyan);
             break;   
         case 3:
-            this->enemy.setSize(sf::Vector2f(70.f, 70.f));
+            this->enemy.setSize(sf::Vector2f(80.f, 80.f));
             this->enemy.setFillColor(sf::Color::Red);
             break;   
         case 4:
@@ -163,6 +163,7 @@ void Engine::pollEvents()
                         this->gameOver = false;
                         this->enemies.clear();
                         this->health = 10;
+                        this->points = 0;
                     }
                 }
                 break;
