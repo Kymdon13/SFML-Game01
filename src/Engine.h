@@ -24,32 +24,27 @@ private:
     sf::Vector2i mousePosWindow;
     sf::Vector2f mousePosView; // Convert the integer to float.
 
+    // Create a VertexArray to draw the line
+    sf::VertexArray *ray;
+    sf::Vector2f startPoint;
+    sf::Vector2f endPoint;
+
     //Assets
     sf::Font font;
     
     //Text
     sf::Text uiText;
-    sf::Text gameOverText;
 
     //Game logic
-    bool gameOver;
     unsigned points;
     int health;
-    float enemySpawnTimer;
-    float enemySpawnTimerMax;
-    int maxEnemies;
     bool mouseHeld;
-
-    //Game objects
-    std::vector<sf::RectangleShape> enemies;
-    sf::RectangleShape enemy;
 
     //Private functions
     void initVariables();
     void initWindow();
     void initFonts();
     void initText();
-    void initEnemies();
 public:
     Engine();
     virtual ~Engine();
@@ -58,17 +53,11 @@ public:
     const bool running() const;
     const bool getGameOver() const;
 
-    //Functions
-    void spawnEnemy();
-
     void pollEvents();
     void updateMousePosition();
     void updateText();
-    void updateEnemies();
     void update();
 
     void renderText(sf::RenderTarget &target);
-    void renderEnemies(sf::RenderTarget &target);
-    void renderGameOver(sf::RenderTarget &target);
     void render();
 };
