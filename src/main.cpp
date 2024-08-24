@@ -3,94 +3,40 @@
 #include "Engine.h"
 
 
-class Box
-{
-private:
-public:
-    //Variables
-    sf::RectangleShape rect;
-    float mass;
-    float size;
-    float x;
-    float velocity;
-    float momentum;
-
-    //Constructor and Destructor
-    Box(bool left, float mass, float velocity);
-    ~Box();
-    
-    //Object Logic
-    void update();
-};
-
-Box::Box(bool left, float mass, float velocity=0.f): mass(mass), velocity(-velocity)
-{
-    //Default color
-    rect.setFillColor(sf::Color::White);
-    //Mass decides size
-    size = mass * 1.f;
-    if (size < 10.f)
-        size = 10.f;
-    if (size > 500.f)
-        size = 500.f;
-    rect.setSize(sf::Vector2f(size, size));
-    //Whether left or right side
-    if (left)
-    {
-        x = 50.f; // box1初始位置，参数
-        rect.setPosition(sf::Vector2f(x, 720.f - size));
-    }
-    else
-    {
-        x = 100.f; // box2初始位置，参数
-        rect.setPosition(sf::Vector2f(x, 720.f - size));
-    }
-}
-
-Box::~Box()
-{
-}
-
-void Box::update()
-{
-    x += velocity / 120.f;
-    rect.setPosition(sf::Vector2f(x, 720.f - size));
-    if (x < 0.f)
-    {
-        x = -x;
-        velocity = -velocity;
-    }
-    momentum = mass * velocity;
-}
+#define WINDOW_WIDTH 1280
+#define WINDOW_HEIGHT 720
 
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(1280, 720), "Collision Detection Example");
+    sf::VideoMode videoMode(WINDOW_WIDTH, WINDOW_HEIGHT);
+    sf::RenderWindow window(videoMode, "Collision Detection Example");
     window.setFramerateLimit(120);
 
-    // 创建两个矩形形状，设定其左右位置和质量大小，参数
-    float m1 = 1.f;
-    float m2 = 1000000.f;
-    float v = 50.f;
-    Box box1(true, m1);
-    Box box2(false, m2, v);
+    //Clock
+    float dt;
+    sf::Clock dt_clock;
 
-    //uiText
-    sf::Font font;
-    if (!font.loadFromFile("assets/Fonts/Dosis-Bold.ttf"))
-    {
-        std::cout << "Failed to load font!" << '\n';
-    }
-    sf::Text uiText;
-    uiText.setFont(font);
-    uiText.setCharacterSize(24);
-    uiText.setFillColor(sf::Color::White);
-    int collisionTimes = 0;
-    std::stringstream ss;
-    ss << "Collision Times: " << collisionTimes;
-    uiText.setString(ss.str());
-    ss.str(""); //Clear the stringstream
+    //Set grid size
+    const float gridSize = 50.f;
+    
+    //Player
+    const float playerSpeed = 500.f;
+    sf::Vector2f movement;
+    sf::RectangleShape player;
+    sf::FloatRect nextPos;
+    player.setFillColor(sf::Color::Green);
+    player.setSize(sf::Vector2f(gridSize, gridSize));
+
+    //Wall
+    std::vector<sf::RectangleShape> walls;
+
+    sf::RectangleShape wall;
+    wall.setFillColor(sf::Color::Red);
+    wall.setSize(sf::Vector2f(gridSize, gridSize));
+    wall.setPosition(sf::Vector2f(2 * gridSize, 2 * gridSize));
+    
+    walls.push_back(wall);
 
     while (window.isOpen())
     {
@@ -100,56 +46,133 @@ int main()
         {
             if (event.type == sf::Event::Closed || event.key.scancode == sf::Keyboard::Scan::Escape)
                 window.close();
-            if (event.type == sf::Event::KeyReleased && event.key.scancode == sf::Keyboard::Scan::Space)
-            {
-                box1.x = 50.f;
-                box1.velocity = 0.f;
-                box1.rect.setPosition(sf::Vector2f(box1.x, 720.f - box1.size));
-                box2.x = 100.f;
-                box2.velocity = -v;
-                box2.rect.setPosition(sf::Vector2f(box2.x, 720.f - box2.size));
-                collisionTimes = 0;
-                ss << "Collision Times: " << collisionTimes << std::endl;
-                uiText.setString(ss.str());
-                ss.str(""); //clear the stringstream
-            }
         }
 
-        // 检查两个矩形是否相交
-        if (box1.x + box1.size >= box2.x)
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
         {
-            float b1v = box1.velocity;
-            float b2v = box2.velocity;
-            //Formula
-            box1.velocity = b1v*(box1.mass-box2.mass)/(box1.mass+box2.mass)+
-                            b2v*(2*box2.mass)/(box1.mass+box2.mass);
-
-            box2.velocity = b1v*(2*box1.mass)/(box1.mass+box2.mass)+
-                            b2v*(box2.mass-box1.mass)/(box1.mass+box2.mass);
-            //Updating the text
-            collisionTimes += 1;
-            ss << "Collision Times: " << collisionTimes;
-            uiText.setString(ss.str());
-            ss.str(""); //Clear the stringstream
-            
-            if (box1.velocity > 0.f && box2.velocity > 0.f && box1.velocity <= box2.velocity) // detect the ending condition
+            sf::Vector2i mousePos = sf::Mouse::getPosition(window) / (int)gridSize;
+            bool exist = false;
+            for (size_t i = 0; i < walls.size(); i++)
             {
-                ss << "Collision Times: " << collisionTimes << std::endl
-                    << "Box2 is faster than Box1, press <Space> to see it again.";
-                uiText.setString(ss.str());
-                ss.str(""); //clear the stringstream
+                if (walls[i].getPosition().x / (int)gridSize == mousePos.x
+                    && walls[i].getPosition().y / (int)gridSize == mousePos.y)
+                {
+                    exist = true;
+                }
+            }
+            if (!exist)
+            {
+                wall.setPosition(mousePos.x * gridSize, mousePos.y * gridSize);
+                walls.push_back(wall);
             }
         }
+        std::cout<<walls.size()<<std::endl;
 
-        //Update
-        box1.update();
-        box2.update();
+        //Get dt
+        dt = dt_clock.restart().asSeconds();
+        
+        //Player movement
+        movement.x = 0.f;
+        movement.y = 0.f;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+        {
+            movement.y -= playerSpeed * dt;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+        {
+            movement.y += playerSpeed * dt;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+        {
+            movement.x -= playerSpeed * dt;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+        {
+            movement.x += playerSpeed * dt;
+        }
+
+        //Get temp data
+        sf::Vector2f pos_tmp = player.getPosition();
+        sf::FloatRect playerBounds = player.getGlobalBounds();
+        nextPos = playerBounds;
+        nextPos.left += movement.x;
+        nextPos.top += movement.y;
+
+        //Object collision
+        for (auto &wall: walls)
+        {
+            sf::FloatRect wallBounds = wall.getGlobalBounds();
+            if (wallBounds.intersects(nextPos))
+            {
+                //Left side of the wall
+                if (playerBounds.left + playerBounds.width <= wallBounds.left
+                    && playerBounds.top < wallBounds.top + wallBounds.height //So that player in the range of collision
+                    && playerBounds.top + playerBounds.height > wallBounds.top) //So that player in the range of collision
+                {
+                    movement.x = 0.f;
+                    player.setPosition(sf::Vector2f(wallBounds.left - playerBounds.width, pos_tmp.y));
+                    continue;
+                }
+                //Right side of the wall
+                if (playerBounds.left >= wallBounds.left + wallBounds.width
+                    && playerBounds.top < wallBounds.top + wallBounds.height //So that player in the range of collision
+                    && playerBounds.top + playerBounds.height > wallBounds.top) //So that player in the range of collision
+                {
+                    movement.x = 0.f;
+                    player.setPosition(sf::Vector2f(wallBounds.left + wallBounds.width, pos_tmp.y));
+                    continue;
+                }
+                //Up side of the wall
+                if (playerBounds.left < wallBounds.left + wallBounds.width //So that player in the range of collision
+                    && playerBounds.left + playerBounds.width > wallBounds.left //So that player in the range of collision
+                    && playerBounds.top + playerBounds.height <= wallBounds.top)
+                {
+                    movement.y = 0.f;
+                    player.setPosition(sf::Vector2f(pos_tmp.x, wallBounds.top - playerBounds.height));
+                    continue;
+                }
+                //Down side of the wall
+                if (playerBounds.left < wallBounds.left + wallBounds.width //So that player in the range of collision
+                    && playerBounds.left + playerBounds.width > wallBounds.left //So that player in the range of collision
+                    && playerBounds.top >= wallBounds.top + wallBounds.height)
+                {
+                    movement.y = 0.f;
+                    player.setPosition(sf::Vector2f(pos_tmp.x, wallBounds.top + wallBounds.height));
+                }
+            }
+        }
+        
+        //Screen collision, with next position, it will not 鬼畜
+        if (nextPos.left < 0.f)
+        {
+            movement.x = 0.f;
+            player.setPosition(sf::Vector2f(0.f, pos_tmp.y));
+        }
+        else if (nextPos.left + nextPos.width > WINDOW_WIDTH)
+        {
+            movement.x = 0.f;
+            player.setPosition(sf::Vector2f(WINDOW_WIDTH - playerBounds.width, pos_tmp.y));
+        }
+        if (nextPos.top < 0.f)
+        {
+            movement.y = 0.f;
+            player.setPosition(sf::Vector2f(pos_tmp.x, 0.f));
+        }
+        else if (nextPos.top + nextPos.height > WINDOW_HEIGHT)
+        {
+            movement.y = 0.f;
+            player.setPosition(sf::Vector2f(pos_tmp.x, WINDOW_HEIGHT - playerBounds.height));
+        }
+        
+        player.move(movement);
 
         //Render
         window.clear();
-        window.draw(box1.rect);
-        window.draw(box2.rect);
-        window.draw(uiText);
+        window.draw(player);
+        for (auto &wall: walls)
+        {
+            window.draw(wall);
+        }
         window.display();
     }
 
