@@ -1,7 +1,14 @@
 // 可更改参数都有“参数”作为注释
 #include <iostream>
-#include "Engine.h"
+#include <vector>
+#include <ctime>
+#include <sstream>
 
+#include <SFML/System.hpp>
+#include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+#include <SFML/Network.hpp>
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
@@ -11,7 +18,7 @@ int main()
 {
     sf::VideoMode videoMode(WINDOW_WIDTH, WINDOW_HEIGHT);
     sf::RenderWindow window(videoMode, "Collision Detection Example");
-    window.setFramerateLimit(120);
+    window.setFramerateLimit(60);
 
     //Clock
     float dt;
@@ -30,16 +37,30 @@ int main()
 
     //Wall
     std::vector<sf::RectangleShape> walls;
-
     sf::RectangleShape wall;
     wall.setFillColor(sf::Color::Red);
     wall.setSize(sf::Vector2f(gridSize, gridSize));
-    wall.setPosition(sf::Vector2f(2 * gridSize, 2 * gridSize));
-    
+    wall.setPosition(sf::Vector2f(2 * gridSize, 3 * gridSize));
     walls.push_back(wall);
+    sf::RectangleShape wall1;
+    wall1.setFillColor(sf::Color::Red);
+    wall1.setSize(sf::Vector2f(gridSize, gridSize));
+    wall1.setPosition(sf::Vector2f(1 * gridSize, 0 * gridSize));
+    walls.push_back(wall1);
+    
+    //Candidate box
+    sf::RectangleShape candidate;
+    candidate.setOutlineColor(sf::Color::Red);
+    candidate.setOutlineThickness(4.f);
+    candidate.setFillColor(sf::Color::Transparent);
+    candidate.setSize(sf::Vector2f(gridSize, gridSize));
+    candidate.setPosition(sf::Vector2f(2 * gridSize, 3 * gridSize));
 
+    // Game loop
     while (window.isOpen())
     {
+        bool wallHasAdded = false;
+
         //Event loop
         sf::Event event;
         while (window.pollEvent(event))
@@ -47,7 +68,8 @@ int main()
             if (event.type == sf::Event::Closed || event.key.scancode == sf::Keyboard::Scan::Escape)
                 window.close();
         }
-
+        
+        //Add wall by clicking
         if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
         {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window) / (int)gridSize;
@@ -64,9 +86,18 @@ int main()
             {
                 wall.setPosition(mousePos.x * gridSize, mousePos.y * gridSize);
                 walls.push_back(wall);
+                wallHasAdded = true;
             }
         }
-        std::cout<<walls.size()<<std::endl;
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window) / (int)gridSize;
+        candidate.setPosition(mousePos.x * gridSize, mousePos.y * gridSize);
+        
+        //Print if wall has been added
+        if (wallHasAdded)
+        {
+            std::cout << "walls: " << walls.size() << std::endl;
+            wallHasAdded = false;
+        }
 
         //Get dt
         dt = dt_clock.restart().asSeconds();
@@ -98,46 +129,126 @@ int main()
         nextPos.left += movement.x;
         nextPos.top += movement.y;
 
-        //Object collision
+        //Object collision, including edge and vertex collision detection
         for (auto &wall: walls)
         {
             sf::FloatRect wallBounds = wall.getGlobalBounds();
             if (wallBounds.intersects(nextPos))
             {
+                float playerRight = playerBounds.left + playerBounds.width;
+                float playerBottom = playerBounds.top + playerBounds.height;
+                float wallRight = wallBounds.left + wallBounds.width;
+                float wallBottom = wallBounds.top + wallBounds.height;
                 //Left side of the wall
-                if (playerBounds.left + playerBounds.width <= wallBounds.left
-                    && playerBounds.top < wallBounds.top + wallBounds.height //So that player in the range of collision
-                    && playerBounds.top + playerBounds.height > wallBounds.top) //So that player in the range of collision
+                if (playerRight <= wallBounds.left
+                    && playerBounds.top < wallBottom //So that player in the range of collision
+                    && playerBottom > wallBounds.top) //So that player in the range of collision
                 {
                     movement.x = 0.f;
                     player.setPosition(sf::Vector2f(wallBounds.left - playerBounds.width, pos_tmp.y));
                     continue;
                 }
                 //Right side of the wall
-                if (playerBounds.left >= wallBounds.left + wallBounds.width
-                    && playerBounds.top < wallBounds.top + wallBounds.height //So that player in the range of collision
-                    && playerBounds.top + playerBounds.height > wallBounds.top) //So that player in the range of collision
+                if (playerBounds.left >= wallRight
+                    && playerBounds.top < wallBottom //So that player in the range of collision
+                    && playerBottom > wallBounds.top) //So that player in the range of collision
                 {
                     movement.x = 0.f;
-                    player.setPosition(sf::Vector2f(wallBounds.left + wallBounds.width, pos_tmp.y));
+                    player.setPosition(sf::Vector2f(wallRight, pos_tmp.y));
                     continue;
                 }
                 //Up side of the wall
-                if (playerBounds.left < wallBounds.left + wallBounds.width //So that player in the range of collision
-                    && playerBounds.left + playerBounds.width > wallBounds.left //So that player in the range of collision
-                    && playerBounds.top + playerBounds.height <= wallBounds.top)
+                if (playerBounds.left < wallRight //So that player in the range of collision
+                    && playerRight > wallBounds.left //So that player in the range of collision
+                    && playerBottom <= wallBounds.top)
                 {
                     movement.y = 0.f;
                     player.setPosition(sf::Vector2f(pos_tmp.x, wallBounds.top - playerBounds.height));
                     continue;
                 }
                 //Down side of the wall
-                if (playerBounds.left < wallBounds.left + wallBounds.width //So that player in the range of collision
-                    && playerBounds.left + playerBounds.width > wallBounds.left //So that player in the range of collision
-                    && playerBounds.top >= wallBounds.top + wallBounds.height)
+                if (playerBounds.left < wallRight //So that player in the range of collision
+                    && playerRight > wallBounds.left //So that player in the range of collision
+                    && playerBounds.top >= wallBottom)
                 {
                     movement.y = 0.f;
-                    player.setPosition(sf::Vector2f(pos_tmp.x, wallBounds.top + wallBounds.height));
+                    player.setPosition(sf::Vector2f(pos_tmp.x, wallBottom));
+                }
+                //Left-Top vertex of the wall
+                if (playerRight <= wallBounds.left
+                    && playerBottom <= wallBounds.top)
+                {
+                    float x_offset = playerRight - wallBounds.left;
+                    float y_offset = playerBottom - wallBounds.top;
+                    if (x_offset > y_offset) //Next position is closer to the upside of the wall
+                    {
+                        movement.y = 0.f;
+                        player.setPosition(sf::Vector2f(pos_tmp.x, wallBounds.top - playerBounds.height));
+                    } else if (x_offset < y_offset) { //Next position is closer to the leftside of the wall
+                        movement.x = 0.f;
+                        player.setPosition(sf::Vector2f(wallBounds.left - playerBounds.width, pos_tmp.y));
+                    } else { //Next position is closer to neither side of the wall
+                        movement.x = 0.f;
+                        movement.y = 0.f;
+                        player.setPosition(sf::Vector2f(wallBounds.left - playerBounds.width, wallBounds.top - playerBounds.height));
+                    }
+                }
+                //Right-Top vertex of the wall
+                if (playerBounds.left >= wallRight
+                    && playerBottom <= wallBounds.top)
+                {
+                    float x_offset = wallRight - playerBounds.left;
+                    float y_offset = playerBottom - wallBounds.top;
+                    if (x_offset > y_offset) //Next position is closer to the upside of the wall
+                    {
+                        movement.y = 0.f;
+                        player.setPosition(sf::Vector2f(pos_tmp.x, wallBounds.top - playerBounds.height));
+                    } else if (x_offset < y_offset) { //Next position is closer to the rightside of the wall
+                        movement.x = 0.f;
+                        player.setPosition(sf::Vector2f(wallRight, pos_tmp.y));
+                    } else { //Next position is closer to neither side of the wall
+                        movement.x = 0.f;
+                        movement.y = 0.f;
+                        player.setPosition(sf::Vector2f(wallRight, wallBounds.top - playerBounds.height));
+                    }
+                }
+                //Right-Bottom vertex of the wall
+                if (playerBounds.left >= wallRight
+                    && playerBounds.top >= wallBottom)
+                {
+                    float x_offset = wallRight - playerBounds.left;
+                    float y_offset = wallBottom - playerBounds.top;
+                    if (x_offset > y_offset) //Next position is closer to the upside of the wall
+                    {
+                        movement.y = 0.f;
+                        player.setPosition(sf::Vector2f(pos_tmp.x, wallBottom));
+                    } else if (x_offset < y_offset) { //Next position is closer to the rightside of the wall
+                        movement.x = 0.f;
+                        player.setPosition(sf::Vector2f(wallRight, pos_tmp.y));
+                    } else { //Next position is closer to neither side of the wall
+                        movement.x = 0.f;
+                        movement.y = 0.f;
+                        player.setPosition(sf::Vector2f(wallRight, wallBottom));
+                    }
+                }
+                //Left-Bottom vertex of the wall
+                if (playerRight <= wallBounds.left
+                    && playerBounds.top >= wallBottom)
+                {
+                    float x_offset = playerRight - wallBounds.left;
+                    float y_offset = wallBottom - playerBounds.top;
+                    if (x_offset > y_offset) //Next position is closer to the upside of the wall
+                    {
+                        movement.y = 0.f;
+                        player.setPosition(sf::Vector2f(pos_tmp.x, wallBottom));
+                    } else if (x_offset < y_offset) { //Next position is closer to the rightside of the wall
+                        movement.x = 0.f;
+                        player.setPosition(sf::Vector2f(wallBounds.left - playerBounds.width, pos_tmp.y));
+                    } else { //Next position is closer to neither side of the wall
+                        movement.x = 0.f;
+                        movement.y = 0.f;
+                        player.setPosition(sf::Vector2f(wallBounds.left - playerBounds.width, wallBottom));
+                    }
                 }
             }
         }
@@ -173,6 +284,7 @@ int main()
         {
             window.draw(wall);
         }
+        window.draw(candidate); //Draw candidate box
         window.display();
     }
 
